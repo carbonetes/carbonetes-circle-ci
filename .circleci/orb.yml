@@ -1,0 +1,235 @@
+version: 2.1
+description: |
+    Carbonetes provides the most comprehensive and complete Container Application Security Testing (CAST) solution on the market with best-in-class results. To use this orb you need to have an carbonetes account registered on carbonetes.com
+display:
+    home_url: https://carbonetes.com/
+commands:
+  scan:
+    description: Comprehensive image scan.
+    parameters:
+      username:
+        type: string
+        description: The account username on Carbonetes.
+      password:
+        type: string
+        description: The account password on Carbonetes.
+      registryUri:
+        type: string
+        description: The registry uri is managed in Carbonetes.
+      repoImageTag:
+        type: string
+        description: The image to be scan.
+      failOnPolicy:
+        default: false
+        type: boolean
+        description: Decides if it build or stop the build based on the policy evaluation. Default false.
+    steps:
+      - run:
+          name: Comprehensive Analysis
+          command: |
+              analysisCheckerData=$(curl -X POST --header 'Content-Type:application/json' --data '{"registryUri":"'<< parameters.registryUri >>'","repoImageTag":"'<< parameters.repoImageTag >>'","username":"'<< parameters.username >>'","password":"'<< parameters.password >>'"}' 'https://api.carbonetes.com/analyze')
+              analysisStatus=$(curl -X POST --header 'Content-Type:application/json' --data $analysisCheckerData 'https://api.carbonetes.com/check-result')
+              while ! $analysisStatus; do analysisStatus=$(curl -X POST --header 'Content-Type:application/json' --data $analysisCheckerData 'https://api.carbonetes.com/check-result'); echo $analysisStatus; done
+              response=$(curl -X POST --header 'Content-Type:application/json' --data $analysisCheckerData 'https://api.carbonetes.com/get-result')
+              echo $response > artifact.json;
+
+      - run:
+          name: Analysis Result
+          command: |
+                path="/home/circleci/project/artifact.json";
+                repoTag=$(jq -r '.repoTag' $path);
+                critical=$(jq '.' $path | jq '. | ({severity: .imageAnalysisLatest.vulnerabilities[].severity})? | select(.severity == "Critical").severity' | awk 'END{print "Critical : " NR}');
+                high=$(jq '.' $path | jq '. | ({severity: .imageAnalysisLatest.vulnerabilities[].severity})? | select(.severity == "High").severity' | awk 'END{print "High : " NR}');
+                medium=$(jq '.' $path | jq '. | ({severity: .imageAnalysisLatest.vulnerabilities[].severity})? | select(.severity == "Medium").severity' | awk 'END{print "Medium : " NR}');
+                low=$(jq '.' $path | jq '. | ({severity: .imageAnalysisLatest.vulnerabilities[].severity})? | select(.severity == "Low").severity' | awk 'END{print "Low : " NR}');
+                negligible=$(jq '.' $path | jq '. | ({severity: .imageAnalysisLatest.vulnerabilities[].severity})? | select(.severity == "Negligible").severity' | awk 'END{print "Negligible : " NR}');
+                unknown=$(jq '.' $path | jq '. | ({severity: .imageAnalysisLatest.vulnerabilities[].severity})? | select(.severity == "Unknown").severity' | awk 'END{print "Unknown : " NR}');
+                echo -e "Image : \033[32m$repoTag\033[0m";
+                echo "==========================================Severities=============================================="
+                echo -e "\033[31m$critical  \c" 
+                echo -e "\033[93m$high \c"
+                echo -e "\033[33m$medium  \c"
+                echo -e "\033[34m$low  \c"
+                echo -e "\033[36m$negligible  \c"
+                echo -e "\033[37m$unknown"
+                echo "========================================Vulnerabilities==========================================="
+                {
+                jq '.' $path | jq '. | ({severity: .imageAnalysisLatest.vulnerabilities[].severity})? | if .severity == null then .severity |= "--" else . end' | grep -m 10 'severity' | awk -F':' '{print $2}' | tr -d '" ' | awk 'NR==1{$0="Severity\n"$0}1' > severity.txt;
+                jq '.' $path | jq '. | ({vuln: .imageAnalysisLatest.vulnerabilities[].vuln})? | if .vuln == null then .vuln |= "--" else . end' | grep -m 10 'vuln' | awk -F':' '{print $2}' | tr -d '" '| awk 'NR==1{$0="Vulnerability Name\n"$0}1' > vuln.txt;
+                jq '.' $path | jq '. | ({package_name: .imageAnalysisLatest.vulnerabilities[].package_name})? | if .package_name == null then .package_name |= "--" else . end' | grep -m 10 'package_name' | awk -F':' '{print $2}' | tr -d '" ' | awk 'NR==1{$0="Package Name\n"$0}1' > package_name.txt;
+                jq '.' $path | jq '. | ({package_version: .imageAnalysisLatest.vulnerabilities[].package_version})? | if .package_version == null then .package_version |= "--" else . end' | grep -m 10 'package_version' | awk -F':' '{print $2}' | tr -d '" ' | awk 'NR==1{$0="Package Version\n"$0}1' > package_version.txt;
+                jq '.' $path | jq '. | ({package_cpe: .imageAnalysisLatest.vulnerabilities[].package_cpe})? | if .package_cpe == null then .package_cpe |= "--" else . end' | grep -m 10 'package_cpe' | awk -F':' '{print $2}' | tr -d '" ' | awk 'NR==1{$0="Package PCE\n"$0}1' > package_cpe.txt;
+                jq '.' $path | jq '. | ({package_path: .imageAnalysisLatest.vulnerabilities[].package_path})? | if .package_path == null then .package_path |= "--" else . end' | grep -m 10 'package_path' | awk -F':' '{print $2}' | tr -d '" ' | awk 'NR==1{$0="Package Path\n"$0}1' > package_path.txt;
+                jq '.' $path | jq '. | ({fix: .imageAnalysisLatest.vulnerabilities[].fix})? | if .fix == null then .fix |= "--" else . end' | grep -m 10 'fix' | awk -F':' '{print $2}' | tr -d '" ' | awk 'NR==1{$0="Fix\n"$0}1' > fix.txt;
+                jq '.' $path | jq '. | ({feed: .imageAnalysisLatest.vulnerabilities[].feed})? | if .feed == null then .feed |= "--" else . end' | grep -m 10 'feed' | awk -F':' '{print $2}' | tr -d '" ' | awk 'NR==1{$0="Feed\n"$0}1'> feed.txt;
+                jq '.' $path | jq '. | ({feed_group: .imageAnalysisLatest.vulnerabilities[].feed_group})? | if .feed_group == null then .feed_group |= "--" else . end' | grep -m 10 'feed_group' | awk -F':' '{print $2}' | tr -d '" ' | awk 'NR==1{$0="Feed Group\n"$0}1'> feed_group.txt;
+              
+                if [ -s severity.txt ]
+                then
+                  printf ""
+                else
+                  printf '\n\t\t\t\t     No Vulnerabilities found\n\n'
+                fi
+                longest_line() { awk -F '\t' 'length > m { m = length } END { print m }' "$1"; }
+                paste severity.txt vuln.txt package_name.txt package_version.txt package_cpe.txt package_path.txt fix.txt feed.txt feed_group.txt | awk -F '\t' -v len1=$( longest_line severity.txt ) -v len2=$( longest_line vuln.txt ) -v len3=$( longest_line package_name.txt ) -v len4=$( longest_line package_version.txt ) -v len5=$( longest_line package_cpe.txt ) -v len6=$( longest_line package_path.txt ) -v len7=$( longest_line fix.txt ) -v len8=$( longest_line feed.txt ) -v len9=$( longest_line feed_group.txt ) '{ printf("|%*s|%*s|%*s|%*s|%*s|%*s|%*s|%*s|%*s|\n", len1, $1, len2, $2, len3, $3, len4, $4, len5, $5, len6, $6, len7, $7, len8, $8, len9, $9 ) }';
+                rm -rf ./*.txt; } || {
+                      echo "\t\t No Vulnerabilities found";
+                }
+                echo ""
+                echo "==========================================Severities=============================================="
+              
+                echo -e "\033[31mCritical : \c" && grep -A12 'analysis' $path  | grep -o '\"critical\":[^,]*' | awk -F':' '{printf $2}' | tr -d '"';
+                echo -e "\033[93m\tHigh : \c" && grep -A12 'analysis' $path  | grep -o '\"high\":[^,]*' | awk -F':' '{printf $2}' | tr -d '"';
+                echo -e "\033[33m\tMedium : \c" && grep -A12 'analysis' $path  | grep -o '\"medium\":[^,]*' | awk -F':' '{printf $2}' | tr -d '"';
+                echo -e "\033[34m\tLow : \c" && grep -A12 'analysis' $path  | grep -o '\"low\":[^,]*' | awk -F':' '{print $2}' | tr -d '"';
+                echo -e "\033[0m\c"
+                echo "====================================Software Composition========================================="
+                {
+                jq '.' $path | jq '. | .scaLatest.analysis.dependencies[].vulnerabilities[]' | jq -r 'limit(10; .dependencyVulnerabilityId) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Dependency Vulnerability Id\n"$0}1' > dependencyVulnerabilityId.txt;
+                jq '.' $path | jq '. | .scaLatest.analysis.dependencies[].vulnerabilities[]' | jq -r 'limit(10; .name) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Dependency Vulnerability Id\n"$0}1' > name.txt;
+                jq '.' $path | jq '. | .scaLatest.analysis.dependencies[].vulnerabilities[]' | jq -r 'limit(10; .severity) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Name\n"$0}1' > severity.txt;
+                jq '.' $path | jq '. | .scaLatest.analysis.dependencies[].vulnerabilities[]' | jq -r 'limit(10; .source) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Source\n"$0}1' > source.txt;
+
+                if [ -s dependencyVulnerabilityId.txt ]
+                then
+                  printf ""
+                else
+                  printf '\n\t\t\t     No Software Composition found\n\n'
+                fi
+                paste dependencyVulnerabilityId.txt name.txt severity.txt source.txt | awk -F '\t' -v len1=$( longest_line dependencyVulnerabilityId.txt ) -v len2=$( longest_line name.txt ) -v len3=$( longest_line severity.txt ) -v len4=$( longest_line source.txt ) '{ printf("|%*s|%*s|%*s|%*s|\n", len1, $1, len2, $2, len3, $3, len4, $4 ) }';
+                rm -rf ./*.txt; } || {
+                      echo "\t\t No Sofware Composition found";
+                }
+                echo ""
+                echo "==================================Software Dependencies==========================================="
+                {
+                jq '.' $path | jq '. | .scaLatest.analysis.dependencies[] | {dependencyId: .dependencyId, vulnCount: .vulnerabilities| length} ' | jq -s 'sort_by(.vulnCount) | reverse' | jq -r 'limit(10;.[] | .dependencyId) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Dependency Id\n"$0}1' > dependencyId.txt;
+                jq '.' $path | jq '. | .scaLatest.analysis.dependencies[] | {fileName: .fileName, vulnCount: .vulnerabilities| length} ' | jq -s 'sort_by(.vulnCount) | reverse' | jq -r 'limit(10;.[] | .fileName) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="File Name\n"$0}1' > fileName.txt;
+                jq '.' $path | jq '. | .scaLatest.analysis.dependencies[] | {filePath: .filePath, vulnCount: .vulnerabilities| length} ' | jq -s 'sort_by(.vulnCount) | reverse' | jq -r 'limit(10;.[] | .filePath) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="File Path\n"$0}1' > filePath.txt;
+                jq '.' $path | jq '. | .scaLatest.analysis.dependencies[] | {dependencyId: .dependencyId, vulnCount: .vulnerabilities| length} ' | jq -s 'sort_by(.vulnCount) | reverse' | jq -r 'limit(10;.[] | .vulnCount) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Vulnerability Count\n"$0}1' > vulnCount.txt;
+
+                if [ -s dependencyId.txt ]
+                then
+                  printf ""
+                else
+                  printf '\n\t\t\t     No Software Dependencies found\n\n'
+                fi
+                paste dependencyId.txt fileName.txt filePath.txt vulnCount.txt | awk -F '\t' -v len1=$( longest_line dependencyId.txt ) -v len2=$( longest_line fileName.txt ) -v len3=$( longest_line filePath.txt ) -v len4=$( longest_line vulnCount.txt ) '{ printf("|%*s|%*s|%*s|%*s|\n", len1, $1, len2, $2, len3, $3, len4, $4) }';
+                rm -rf ./*.txt; } || {
+                      echo "\t\t No Software Dependencies";
+                }
+                echo ""
+                echo "==========================================Licenses================================================"
+                {
+                jq '.' $path | jq '. | .licenseFinderLatest.imageDependencies[].dependencyName | if . == null then . |= "--" else . end' | sort '--unique' | grep -m 10 '' | tr -d '", ' | awk 'NR==1{$0="Dependency Name\n"$0}1' > dependencyName.txt;
+                jq '.' $path | jq '. | .licenseFinderLatest.imageDependencies[].version | if . == null then . |= "--" else . end' | sort '--unique' | grep -m 10 '' | tr -d '", ' | awk 'NR==1{$0="Version\n"$0}1' > version.txt;
+                jq '.' $path | jq '. | .licenseFinderLatest.imageDependencies[].packageManager | if . == null then . |= "--" else . end' | sort '--unique' | grep -m 10 '' | tr -d '", ' | awk 'NR==1{$0="Package Name\n"$0}1' > packageManager.txt;
+                jq '.' $path | jq '. | .licenseFinderLatest.imageDependencies[].groups | if . == null then . |= "--" else . end' | sort '--unique' | grep -m 10 '' | tr -d '", ' | awk 'NR==1{$0="Groups\n"$0}1'> groups.txt;
+                jq '.' $path | jq '. | .licenseFinderLatest.imageDependencies[] | {licenses: .licenses }' | jq --raw-output '.licenses | map(.licenseName) | join(",") | if . == "" then . |= "--" else . end' | sort '--unique' | grep -m 10 '' | awk 'NR==1{$0="License Name\n"$0}1'> licenses.txt;
+          
+                paste dependencyName.txt version.txt licenses.txt packageManager.txt groups.txt | awk -F '\t' -v len1=$( longest_line dependencyName.txt ) -v len2=$( longest_line version.txt ) -v len3=$( longest_line licenses.txt ) -v len4=$( longest_line packageManager.txt ) -v len5=$( longest_line groups.txt ) '{ printf("|%*s|%*s|%*s|%*s|%*s|\n", len1, $1, len2, $2, len3, $3, len4, $4, len5, $5) }';
+                if [ -s dependencyName.txt ]
+                then
+                  printf ""
+                else
+                  printf '\n\t\t\t\t     No Licenses found\n\n'
+                fi
+                rm -rf ./*.txt; } || {
+                      echo "\t\t No Licenses found"
+                }
+                echo ""
+                echo "======================================Malware Analysis============================================"
+                {
+                jq '.' $path | jq '. | (.malwareAnalysisLatest.scanResult.infectedFiles[])?' | jq -r 'limit(10; .virus) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Virus\n"$0}1' > virus.txt;
+                jq '.' $path | jq '. | (.malwareAnalysisLatest.scanResult.infectedFiles[])?' | jq -r 'limit(10; .file_name) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="File Name\n"$0}1' > file_name.txt;
+                jq '.' $path | jq '. | (.malwareAnalysisLatest.scanResult.infectedFiles[])?' | jq -r 'limit(10; .file_directory) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="File Directory\n"$0}1' > file_directory.txt;
+                
+                paste virus.txt file_name.txt file_directory.txt | awk -F '\t' -v len1=$( longest_line virus.txt ) -v len2=$( longest_line file_name.txt ) -v len3=$( longest_line file_directory.txt ) '{ printf("|%*s|%*s|%*s|\n", len1, $1, len2, $2, len3, $3) }';
+                if [ -s virus.txt ]
+                then
+                  printf ""
+                else
+                  printf '\n\t\t\t\t     No Malwares found\n\n'
+                fi
+                rm -rf ./*.txt; } || {
+                  printf '\n\t\t\t\t     No Malwares found\n\n'    
+                }
+                echo ""
+                echo "==========================================Secrets================================================="
+                {
+                jq '.' $path | jq '. | (.secretAnalysisLatest.secrets[])?' | jq -r 'limit(10; .fileName) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="File Name\n"$0}1' > fileName.txt;
+                jq '.' $path | jq '. | (.secretAnalysisLatest.secrets[])?' | jq -r 'limit(10; .contentRegexMatch) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Content Regex Match\n"$0}1' > contentRegexMatch.txt;
+                jq '.' $path | jq '. | (.secretAnalysisLatest.secrets[])?' | jq -r 'limit(10; .filePath) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="File Path\n"$0}1' > filePath.txt;
+                jq '.' $path | jq '. | (.secretAnalysisLatest.secrets[])?' | jq -r 'limit(10; .lineNo) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Line No\n"$0}1' > lineNo.txt;
+                
+                if [ -s fileName.txt ]
+                then
+                  printf ""
+                else
+                  printf '\n\t\t\t\t     No Secrets found\n\n'
+                fi
+
+                paste fileName.txt contentRegexMatch.txt filePath.txt lineNo.txt | awk -F '\t' -v len1=$( longest_line fileName.txt ) -v len2=$( longest_line contentRegexMatch.txt ) -v len3=$( longest_line filePath.txt ) -v len4=$( longest_line lineNo.txt ) '{ printf("|%*s|%*s|%*s|%*s|\n", len1, $1, len2, $2, len3, $3, len4, $4) }'
+                rm -rf ./*.txt; } || {
+                      echo "\t\t No Secrets found"
+                }
+                echo ""
+                echo "=================================================================================================="
+                echo ""
+
+                policyResult=$(jq '[.repoImageEnvironments[].policyEvaluationLatest.policyResult] | [first]' $path | tr -d '"[]\n ');
+                finalAction=$(jq '[.repoImageEnvironments[].policyEvaluationLatest.finalAction] | [first]' $path | tr -d '"[]\n ');
+
+                if [ $policyResult == 'PASSED' ]; then 
+                      echo -e "Policy Result : \033[32m PASSED\033[0m"
+                elif [ $policyResult == 'FAILED' ]; then
+                      echo -e "Policy Result : \033[31m FAILED\033[0m"
+                else
+                      echo -e "Policy Result : \033[31m No Policy Selected\033[0m"
+                fi
+                  
+                if [ $finalAction == 'STOP' ]; then 
+                      echo -e "\033[20mFinal Action : \033[31m STOP\033[0m"
+                elif [ $finalAction == 'GO' ]; then
+                      echo -e "Final Action : \033[32m GO\033[0m"
+                elif [ $finalAction == 'WARN' ]; then
+                      echo -e "Final Action : \033[33m WARN\033[0m"
+                else
+                      echo -e "\033[20mFinal Action : \033[31m No Action Selected\033[0m"
+                fi
+
+                if [ << parameters.failOnPolicy >> == true ]; then
+                  if [ $policyResult == 'FAILED' ]; then
+                     exit 1;
+                  else
+                     exit 0;
+                  fi
+                else
+                     exit 0;
+                fi
+      - store_artifacts:
+            path: artifact.json
+            destination: artifact-file
+examples:
+    image-scanning:
+        description: |
+            Use the Carbonetes orb inside a build job to scan the image for known vulnerabilities
+        usage:
+           orbs:
+             comprehensive: tcarbonetes_namespace/tcarbonetes@x.y.z
+           jobs: 
+             build: 
+               machine: true
+               steps:
+                 - comprehensive/scan: 
+                      username: '${username}'
+                      password: '${password}'
+                      registryUri: "amazonaws.com"
+                      repoImageTag: "test-trivy:latest"
+                      failOnPolicy: true
+           version: 2.1
+           workflows: 
+               carbonetes: 
+                  jobs: 
+                   - build: 
+                       context: credentials
