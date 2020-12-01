@@ -216,15 +216,15 @@ examples:
             Use the Carbonetes orb inside a build job to scan the image for known vulnerabilities
         usage:
            orbs:
-             comprehensive: tcarbonetes_namespace/tcarbonetes@x.y.z
+             comprehensive: carbonetes/carbonetes@x.y.z
            jobs: 
              build: 
                machine: true
                steps:
                  - comprehensive/scan: 
-                      username: '${username}'
-                      password: '${password}'
-                      registryUri: "amazonaws.com"
+                      username: '${USERNAME}'
+                      password: '${PASSWORD}'
+                      registryUri: '${REGISTRY_URI}'
                       repoImageTag: "test-trivy:latest"
                       failOnPolicy: true
            version: 2.1
