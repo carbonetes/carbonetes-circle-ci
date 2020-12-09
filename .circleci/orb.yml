@@ -225,7 +225,7 @@ examples:
                       username: '${USERNAME}'
                       password: '${PASSWORD}'
                       registryUri: '${REGISTRY_URI}'
-                      repoImageTag: "test-trivy:latest"
+                      repoImageTag: "busybox:latest"
                       failOnPolicy: true
            version: 2.1
            workflows: 

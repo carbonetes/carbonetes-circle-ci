@@ -20,9 +20,9 @@
 
 # Introduction
 
-**Carbonetes Team City Plug-in** provides comprehensive container analysis and policy evaluation as a fully managed service. Carbonetes analyzes your container images for native code vulnerabilities, software composition analysis (SCA), license types, bill of materials, malware, secrets. Carbonetes' powerful policy tool enables you to load standard policies or build , test and refine custom policies. It provides integrations with various container registries, CI/CD tools, as well as Slack and Jira.
+**Carbonetes Orb** provides comprehensive container analysis and policy evaluation as a fully managed service. Carbonetes analyzes your container images for native code vulnerabilities, software composition analysis (SCA), license types, bill of materials, malware, secrets. Carbonetes' powerful policy tool enables you to load standard policies or build , test and refine custom policies. It provides integrations with various container registries, CI/CD tools, as well as Slack and Jira.
 
-**Carbonetes Team City Plug-in** seamlessly integrates comprehensive container analysis directly into your CI/CD pipeline. Upon committing your code, the Team City plug-in automatically initiates a comprehensive container analysis scan. The results of that scan are compared to the applicable policy to determine whether the container should build or not. The insight from the analysis and the policy evaluation are embedded right inside Team City making it easy to find and resolve issues without ever leaving Team City.
+**Carbonetes Orb** seamlessly integrates comprehensive container analysis directly into your CI/CD pipeline. Upon committing your code, the Team City plug-in automatically initiates a comprehensive container analysis scan. The results of that scan are compared to the applicable policy to determine whether the container should build or not. The insight from the analysis and the policy evaluation are embedded right inside Team City making it easy to find and resolve issues without ever leaving Team City.
   
 
 # Prerequisites
@@ -53,7 +53,7 @@ jobs:
           username: '${USERNAME}'
           password: '${PASSWORD}'
           registryUri: '${REGISTRY_URI}'
-          repoImageTag: 'test-trivy:latest'
+          repoImageTag: 'busybox:latest'
           failOnPolicy: true
 version: 2.1
 workflows:
