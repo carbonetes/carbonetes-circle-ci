@@ -3,6 +3,7 @@ description: |
     Carbonetes provides the most comprehensive and complete Container Application Security Testing (CAST) solution on the market with best-in-class results. To use this orb you need to have an carbonetes account registered on carbonetes.com
 display:
     home_url: https://carbonetes.com/
+    source_url: https://github.com/carbonetes/carbonetes-circle-ci
 commands:
   scan:
     description: Comprehensive image scan.
@@ -225,7 +226,7 @@ examples:
                       username: '${USERNAME}'
                       password: '${PASSWORD}'
                       registryUri: '${REGISTRY_URI}'
-                      repoImageTag: "busybox:latest"
+                      repoImageTag: 'busybox:latest'
                       failOnPolicy: true
            version: 2.1
            workflows: 
