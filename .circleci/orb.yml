@@ -28,10 +28,45 @@ commands:
       - run:
           name: Comprehensive Analysis
           command: |
-              analysisCheckerData=$(curl -X POST --header 'Content-Type:application/json' --data '{"registryUri":"'<< parameters.registryUri >>'","repoImageTag":"'<< parameters.repoImageTag >>'","username":"'<< parameters.username >>'","password":"'<< parameters.password >>'"}' 'https://api.carbonetes.com/analyze')
-              analysisStatus=$(curl -X POST --header 'Content-Type:application/json' --data $analysisCheckerData 'https://api.carbonetes.com/check-result')
-              while ! $analysisStatus; do analysisStatus=$(curl -X POST --header 'Content-Type:application/json' --data $analysisCheckerData 'https://api.carbonetes.com/check-result'); echo $analysisStatus; done
-              response=$(curl -X POST --header 'Content-Type:application/json' --data $analysisCheckerData 'https://api.carbonetes.com/get-result')
+              ANALYZE_ENDPOINT="https://api.carbonetes.com/api/v1/analysis/analyze";
+              CHECK_RESULT_ENDPOINT="https://api.carbonetes.com/api/v1/analysis/check-result";
+              GET_RESULT_ENDPOINT="https://api.carbonetes.com/api/v1/analysis/get-result";
+
+              MSG_AUTENTICATION_FAILED="Authentication Failed";
+              MSG_ACCOUNT_NOT_FOUND="Account not found";
+              MSG_REGISTRY_NOT_FOUND="Registry is not found";
+              MSG_IMAGE_NOT_FOUND="Image is not found in the registry";
+              MSG_LICENSE_EXPIRED="License has already expired";
+              MSG_INSUFFICIENT_LICENSE="Insufficent license count";
+
+              AWS_MARKTET="$https://aws.amazon.com/marketplace/saas/ordering?productId=1bede3a0-aff1-4a89-ad92-baab6b8b4e70";
+
+              analysisCheckerData=$(curl -X POST --header 'Content-Type:application/json' --data '{"registryUri":"'<< parameters.registryUri >>'","repoImageTag":"'<< parameters.repoImageTag >>'","username":"'<< parameters.username >>'","password":"'<< parameters.password >>'"}' $ANALYZE_ENDPOINT)
+              
+              if [[ $analysisCheckerData == $MSG_AUTENTICATION_FAILED ]]; then 
+               echo -e "\033[20mError : \033[31m $MSG_AUTENTICATION_FAILED\033[0m"
+               exit 1;
+              elif [[ $analysisCheckerData == $MSG_ACCOUNT_NOT_FOUND ]]; then
+                echo -e "\033[20mError : \033[31m $MSG_ACCOUNT_NOT_FOUND\033[0m"
+              elif [[ $analysisCheckerData == $MSG_REGISTRY_NOT_FOUND ]]; then
+                echo -e "\033[20mError : \033[31m $MSG_REGISTRY_NOT_FOUND\033[0m"
+                exit 1;
+              elif [[ $analysisCheckerData == $MSG_IMAGE_NOT_FOUND ]]; then
+                echo -e "\033[20mError : \033[31m $MSG_IMAGE_NOT_FOUND\033[0m"
+                exit 1;
+              elif [[ $analysisCheckerData == $MSG_LICENSE_EXPIRED ]]; then
+                echo -e "\033[20mError : \033[31m Carbonetes License Expired\033[0m"
+                echo -e "\033[20mMessage : \033[31m Your contract licenses has expired. Please configure or renew your AWS Contract Licenses at $AWS_MARKTET \033[0m"
+                exit 1;
+              elif [[ $analysisCheckerData == $MSG_INSUFFICIENT_LICENSE ]]; then
+                echo -e "Error : \033[33m Insufficient Carbonetes licenses\033[0m"
+                echo -e "Message : \033[33m Your contract licenses is insufficient for your current users. Please configure your AWS Contract Licenses at  $AWS_MARKTET \033[0m"
+                exit 1;
+              fi
+
+              analysisStatus=$(curl -X POST --header 'Content-Type:application/json' --data $analysisCheckerData $CHECK_RESULT_ENDPOINT)
+              while ! $analysisStatus; do analysisStatus=$(curl -X POST --header 'Content-Type:application/json' --data $analysisCheckerData $CHECK_RESULT_ENDPOINT); echo $analysisStatus; done
+              response=$(curl -X POST --header 'Content-Type:application/json' --data $analysisCheckerData $GET_RESULT_ENDPOINT)
               echo $response > artifact.json;
 
       - run:
@@ -84,7 +119,7 @@ commands:
                 echo -e "\033[33m\tMedium : \c" && grep -A12 'analysis' $path  | grep -o '\"medium\":[^,]*' | awk -F':' '{printf $2}' | tr -d '"';
                 echo -e "\033[34m\tLow : \c" && grep -A12 'analysis' $path  | grep -o '\"low\":[^,]*' | awk -F':' '{print $2}' | tr -d '"';
                 echo -e "\033[0m\c"
-                echo "====================================Software Composition========================================="
+                echo "=====================================Software Composition========================================="
                 {
                 jq '.' $path | jq '. | .scaLatest.analysis.dependencies[].vulnerabilities[]' | jq -r 'limit(10; .dependencyVulnerabilityId) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Dependency Vulnerability Id\n"$0}1' > dependencyVulnerabilityId.txt;
                 jq '.' $path | jq '. | .scaLatest.analysis.dependencies[].vulnerabilities[]' | jq -r 'limit(10; .name) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Dependency Vulnerability Id\n"$0}1' > name.txt;
