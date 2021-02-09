@@ -174,23 +174,23 @@ commands:
                       echo "\t\t No Licenses found"
                 }
                 echo ""
-                echo "======================================Malware Analysis============================================"
-                {
-                jq '.' $path | jq '. | (.malwareAnalysisLatest.scanResult.infectedFiles[])?' | jq -r 'limit(10; .virus) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Virus\n"$0}1' > virus.txt;
-                jq '.' $path | jq '. | (.malwareAnalysisLatest.scanResult.infectedFiles[])?' | jq -r 'limit(10; .file_name) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="File Name\n"$0}1' > file_name.txt;
-                jq '.' $path | jq '. | (.malwareAnalysisLatest.scanResult.infectedFiles[])?' | jq -r 'limit(10; .file_directory) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="File Directory\n"$0}1' > file_directory.txt;
+                # echo "======================================Malware Analysis============================================"
+                # {
+                # jq '.' $path | jq '. | (.malwareAnalysisLatest.scanResult.infectedFiles[])?' | jq -r 'limit(10; .virus) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="Virus\n"$0}1' > virus.txt;
+                # jq '.' $path | jq '. | (.malwareAnalysisLatest.scanResult.infectedFiles[])?' | jq -r 'limit(10; .file_name) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="File Name\n"$0}1' > file_name.txt;
+                # jq '.' $path | jq '. | (.malwareAnalysisLatest.scanResult.infectedFiles[])?' | jq -r 'limit(10; .file_directory) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="File Directory\n"$0}1' > file_directory.txt;
                 
-                paste virus.txt file_name.txt file_directory.txt | awk -F '\t' -v len1=$( longest_line virus.txt ) -v len2=$( longest_line file_name.txt ) -v len3=$( longest_line file_directory.txt ) '{ printf("|%*s|%*s|%*s|\n", len1, $1, len2, $2, len3, $3) }';
-                if [ -s virus.txt ]
-                then
-                  printf ""
-                else
-                  printf '\n\t\t\t\t     No Malwares found\n\n'
-                fi
-                rm -rf ./*.txt; } || {
-                  printf '\n\t\t\t\t     No Malwares found\n\n'    
-                }
-                echo ""
+                # paste virus.txt file_name.txt file_directory.txt | awk -F '\t' -v len1=$( longest_line virus.txt ) -v len2=$( longest_line file_name.txt ) -v len3=$( longest_line file_directory.txt ) '{ printf("|%*s|%*s|%*s|\n", len1, $1, len2, $2, len3, $3) }';
+                # if [ -s virus.txt ]
+                # then
+                #   printf ""
+                # else
+                #   printf '\n\t\t\t\t     No Malwares found\n\n'
+                # fi
+                # rm -rf ./*.txt; } || {
+                #   printf '\n\t\t\t\t     No Malwares found\n\n'    
+                # }
+                # echo ""
                 echo "==========================================Secrets================================================="
                 {
                 jq '.' $path | jq '. | (.secretAnalysisLatest.secrets[])?' | jq -r 'limit(10; .fileName) | if . == null then . |= "--" else . end' | awk 'NR==1{$0="File Name\n"$0}1' > fileName.txt;
